@@ -1,0 +1,5 @@
+# Development Environment
+.vscode
+
+# Built output
+/rego-scheduler
