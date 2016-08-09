@@ -147,7 +147,7 @@ func runREPL(c *config) {
 		}
 	}()
 
-	r := repl.New(ds, ps, "", os.Stdout, "json")
+	r := repl.New(ds, ps, "", os.Stdout, "json", "")
 	setPackage(r, fit)
 	r.Loop()
 }
