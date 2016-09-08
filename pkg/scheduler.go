@@ -22,15 +22,17 @@ import (
 
 // Scheduler implements the business logic that integrates Kubernetes with OPA.
 type Scheduler struct {
-	ds         *storage.DataStore
+	store      *storage.Storage
+	compiler   *ast.Compiler
 	fit        []interface{}
 	clusterURL string
 }
 
 // New returns a new Scheduler object that can be started.
-func New(ds *storage.DataStore, fit []interface{}, clusterURL string) *Scheduler {
+func New(compiler *ast.Compiler, store *storage.Storage, fit []interface{}, clusterURL string) *Scheduler {
 	return &Scheduler{
-		ds:         ds,
+		store:      store,
+		compiler:   compiler,
 		fit:        fit,
 		clusterURL: clusterURL,
 	}
@@ -43,13 +45,23 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) init() {
-	baseDocs := []interface{}{
+
+	baseDocs := []string{
 		"pods", "nodes", "replicationcontrollers", "services",
 	}
+
+	txn, err := s.store.NewTransaction()
+
+	if err != nil {
+		glog.Fatalf("Error opening transaction against storage: %v", err)
+	}
+
+	defer s.store.Close(txn)
+
 	for _, x := range baseDocs {
-		if err := s.ds.Patch(storage.AddOp, []interface{}{x}, map[string]interface{}{}); err != nil {
-			glog.Errorf("Error creating %v document: %v", x, err)
-			return
+		ref := ast.MustParseRef("data." + x)
+		if err := s.store.Write(txn, storage.AddOp, ref, map[string]interface{}{}); err != nil {
+			glog.Fatalf("Error creating %v document: %v", x, err)
 		}
 	}
 }
@@ -142,7 +154,15 @@ func (s *Scheduler) schedulePod(pod map[string]interface{}) error {
 
 	t0 := time.Now()
 
-	params := topdown.NewQueryParams(s.ds, globals, s.fit)
+	txn, err := s.store.NewTransaction()
+	if err != nil {
+		glog.Errorf("Failed to open transaction against storage: %v", err)
+		return err
+	}
+
+	defer s.store.Close(txn)
+
+	params := topdown.NewQueryParams(s.compiler, s.store, txn, globals, s.fit)
 	params.Tracer = &glogtracer{}
 
 	podName := pod["metadata"].(map[string]interface{})["name"]
@@ -172,11 +192,11 @@ func (s *Scheduler) schedulePod(pod map[string]interface{}) error {
 
 	spec := pod["spec"].(map[string]interface{})
 	spec["nodeName"] = nodeName
-	path := []interface{}{"pods", uid}
+	path := ast.MustParseRef(fmt.Sprintf("data.pods[%q]", uid))
 
 	t0 = time.Now()
 
-	if err := s.ds.Patch(storage.AddOp, path, pod); err != nil {
+	if err := s.store.Write(txn, storage.AddOp, path, pod); err != nil {
 		return err
 	}
 
@@ -186,7 +206,7 @@ func (s *Scheduler) schedulePod(pod map[string]interface{}) error {
 
 	if err := s.bindPod(pod); err != nil {
 		glog.Errorf("Failed to bind pod %v: %v", podName, err)
-		if err2 := s.ds.Patch(storage.RemoveOp, path, nil); err2 != nil {
+		if err2 := s.store.Write(txn, storage.RemoveOp, path, nil); err2 != nil {
 			return err2
 		}
 		return err
@@ -282,8 +302,13 @@ func (s *Scheduler) patchOp(resourceType string, op storage.PatchOp, obj interfa
 	if err != nil {
 		return err
 	}
-	path := []interface{}{resourceType, uid}
-	return s.ds.Patch(op, path, obj)
+	path := ast.MustParseRef(fmt.Sprintf("data.%v[%q]", resourceType, uid))
+	txn, err := s.store.NewTransaction()
+	if err != nil {
+		return err
+	}
+	defer s.store.Close(txn)
+	return s.store.Write(txn, op, path, obj)
 }
 
 func (s *Scheduler) getNodeName(pod map[string]interface{}) (string, error) {
