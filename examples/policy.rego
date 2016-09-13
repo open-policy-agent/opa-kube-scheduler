@@ -13,7 +13,7 @@ import requested_pod as req
 fit[node_name] = weight :-
     scheduler_name[my_scheduler_name],
     filter[node_id],
-    prioritise[node_id] = weight,
+    prioritize[node_id] = weight,
     node_name = nodes[node_id].metadata.name
 
 # Filtering for all pods except hollow node pods.
@@ -231,7 +231,7 @@ num_pods = n :- count(pods, n)
 
 num_nodes = n :- count(nodes, n)
 
-prioritise[node_id] = weight :-
+prioritize[node_id] = weight :-
     least_requested[node_id] = lr_w,
     balanced_allocation[node_id] = ba_w,
     selector_spreading[node_id] = ss_w,
