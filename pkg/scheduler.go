@@ -10,50 +10,52 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/server"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 )
 
-// Scheduler implements the business logic that integrates Kubernetes with OPA.
+// Scheduler implements ...
 type Scheduler struct {
 	store      *storage.Storage
-	compiler   *ast.Compiler
+	server     *server.Server
 	fit        []interface{}
 	clusterURL string
 }
 
-// New returns a new Scheduler object that can be started.
-func New(compiler *ast.Compiler, store *storage.Storage, fit []interface{}, clusterURL string) *Scheduler {
+// New returns a new Scheduler object.
+func New(server *server.Server, store *storage.Storage, fit []interface{}, clusterURL string) *Scheduler {
 	return &Scheduler{
 		store:      store,
-		compiler:   compiler,
+		server:     server,
 		fit:        fit,
 		clusterURL: clusterURL,
 	}
 }
 
 // Start causes the scheduler to begin scheduling pods.
-func (s *Scheduler) Start() {
-	s.init()
+func (s *Scheduler) Start() error {
+	if err := s.init(); err != nil {
+		return err
+	}
 	s.run()
+	return nil
 }
 
-func (s *Scheduler) init() {
+func (s *Scheduler) init() error {
 
 	baseDocs := []string{
 		"pods", "nodes", "replicationcontrollers", "services",
 	}
 
 	txn, err := s.store.NewTransaction()
-
 	if err != nil {
-		glog.Fatalf("Error opening transaction against storage: %v", err)
+		return err
 	}
 
 	defer s.store.Close(txn)
@@ -61,9 +63,19 @@ func (s *Scheduler) init() {
 	for _, x := range baseDocs {
 		ref := ast.MustParseRef("data." + x)
 		if err := s.store.Write(txn, storage.AddOp, ref, map[string]interface{}{}); err != nil {
-			glog.Fatalf("Error creating %v document: %v", x, err)
+			return err
 		}
 	}
+
+	return nil
+}
+
+type action func(string, interface{}) error
+
+type msg struct {
+	action       action
+	resourceType string
+	payload      interface{}
 }
 
 func (s *Scheduler) run() {
@@ -113,7 +125,7 @@ func (s *Scheduler) run() {
 	go func() {
 		for msg := range mux {
 			if err := msg.action(msg.resourceType, msg.payload); err != nil {
-				glog.Errorf("Error handling update (%v) for %v: %v", msg.kind(), msg.resourceType, err)
+				glog.Errorf("Error handling update (%T) for %v: %v", msg.payload, msg.resourceType, err)
 			}
 		}
 	}()
@@ -162,7 +174,7 @@ func (s *Scheduler) schedulePod(pod map[string]interface{}) error {
 
 	defer s.store.Close(txn)
 
-	params := topdown.NewQueryParams(s.compiler, s.store, txn, globals, s.fit)
+	params := topdown.NewQueryParams(s.server.Compiler(), s.store, txn, globals, s.fit)
 	params.Tracer = &glogtracer{}
 
 	podName := pod["metadata"].(map[string]interface{})["name"]
@@ -174,11 +186,20 @@ func (s *Scheduler) schedulePod(pod map[string]interface{}) error {
 
 	queryTime := time.Since(t0)
 
-	rankings := rankings{}
+	var rankings rankings
 
-	for k, v := range results.(map[string]interface{}) {
-		w := v.(float64)
-		rankings = append(rankings, ranking{k, w})
+	switch results := results.(type) {
+	case map[string]interface{}:
+		for k, v := range results {
+			w := v.(float64)
+			rankings = append(rankings, ranking{k, w})
+		}
+	case topdown.Undefined:
+		glog.Infof("Unable to schedule pod: %v: fit document is undefined (took query:%v)", podName, queryTime)
+		return nil
+	default:
+		glog.Infof("Unable to schedule pod: %v: fit document is malformed (took query:%v)", podName, queryTime)
+		return nil
 	}
 
 	sort.Sort(rankings)
@@ -335,26 +356,6 @@ func (s *Scheduler) getMetadata(key string, obj interface{}) (string, error) {
 	return "", fmt.Errorf("malformed object: %v", obj)
 }
 
-type action func(string, interface{}) error
-
-type msg struct {
-	action       action
-	resourceType string
-	payload      interface{}
-}
-
-func (m *msg) kind() string {
-	switch p := m.payload.(type) {
-	case *sync:
-		return p.Type
-	case *resync:
-		return "RESYNC"
-	case error:
-		return "ERROR"
-	}
-	return "unknown payload type"
-}
-
 type ranking struct {
 	nodeName string
 	weight   float64
@@ -374,21 +375,4 @@ func (r rankings) Swap(i, j int) {
 	tmp := r[i]
 	r[i] = r[j]
 	r[j] = tmp
-}
-
-type glogtracer struct{}
-
-func (t *glogtracer) Enabled() bool {
-	return bool(glog.V(3))
-}
-
-func (t *glogtracer) Trace(ctx *topdown.Context, f string, a ...interface{}) {
-	var padding string
-	i := 0
-	for ; ctx != nil; ctx = ctx.Previous {
-		padding += strings.Repeat(" ", ctx.Index+i)
-		i++
-	}
-	f = padding + f + "\n"
-	glog.V(3).Infof(f, a...)
 }

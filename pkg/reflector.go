@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -27,6 +28,10 @@ const (
 	added    = "ADDED"
 	modified = "MODIFIED"
 	deleted  = "DELETED"
+)
+
+const (
+	backoffDelay = 5 * time.Second
 )
 
 type reflector struct {
@@ -60,7 +65,7 @@ func (r *reflector) Start() {
 			items, version, err := r.list()
 			if err != nil {
 				r.Rx <- err
-				// TODO(tsandall): backoff
+				time.Sleep(backoffDelay)
 				continue
 			}
 			r.Rx <- &resync{items}

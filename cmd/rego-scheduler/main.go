@@ -7,118 +7,74 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/golang/glog"
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/repl"
+	"github.com/open-policy-agent/opa/server"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/rego-scheduler/pkg"
 )
 
+func cmdServer(c *config) {
+
+	if err := os.MkdirAll(c.policyDir, 0755); err != nil {
+		glog.Fatalf("Unable to create policy directory: %v.", err)
+	}
+
+	store := storage.New(storage.InMemoryConfig().WithPolicyDir(c.policyDir))
+	server := server.New(store, c.listenAddr, true)
+	scheduler := pkg.New(server, store, parsePath(c.fitDoc), c.clusterURL)
+
+	if err := scheduler.Start(); err != nil {
+		glog.Fatalf("Unable to start scheduler: %v.", err)
+	}
+
+	if err := server.Loop(); err != nil {
+		glog.Fatalf("Server exited: %v.", err)
+	}
+}
+
+func cmdPrintVersion() {
+	fmt.Println(pkg.Version)
+}
+
 type config struct {
 	showVersion bool
+	listenAddr  string
+	policyDir   string
 	clusterURL  string
-	policyFile  string
 	fitDoc      string
-}
-
-func loadPolicy(policyFile string) *ast.Compiler {
-	f, err := os.Open(policyFile)
-	if err != nil {
-		glog.Fatalf("Failed to open policy file: %v", err)
-	}
-	defer f.Close()
-
-	bs, err := ioutil.ReadAll(f)
-	if err != nil {
-		glog.Fatalf("Failed to read policy file: %v", err)
-	}
-
-	mod, err := ast.ParseModule(policyFile, string(bs))
-	if err != nil {
-		glog.Fatalf("Failed to parse policy file: %v", err)
-	}
-
-	mods := map[string]*ast.Module{
-		policyFile: mod,
-	}
-
-	c := ast.NewCompiler()
-	if c.Compile(mods); c.Failed() {
-		glog.Fatalf("Failed to compile policy file: %v", c.FlattenErrors())
-	}
-
-	return c
-}
-
-func storePolicy(store *storage.Storage, modules map[string]*ast.Module) {
-	txn, err := store.NewTransaction()
-	if err != nil {
-		glog.Fatalf("Failed to open transaction: %v", err)
-	}
-	defer store.Close(txn)
-	for id, mod := range modules {
-		if err := store.InsertPolicy(txn, id, mod, nil, false); err != nil {
-			glog.Fatalf("Failed to store policy: %v", err)
-		}
-	}
-}
-
-func setPackage(r *repl.REPL, fitDoc string) {
-	path := strings.Split(fitDoc[1:], "/")
-	path = path[:len(path)-1]
-	r.OneShot(fmt.Sprintf("package %v", strings.Join(path, ".")))
 }
 
 func parseArgs() *config {
 	c := config{}
-	flag.StringVar(&c.clusterURL, "cluster_url", "http://localhost:8080/api/v1", "set the Kubernetes API URL")
-	flag.StringVar(&c.policyFile, "policy", "etc/policy.rego", "set the path of the policy definition")
+	flag.BoolVar(&c.showVersion, "version", false, "print the scheduler version and exit")
+	flag.StringVar(&c.listenAddr, "listen_addr", ":8181", "set the listening address of the server")
+	flag.StringVar(&c.policyDir, "policy_dir", "policies", "set the path of the directory to store policies")
+	flag.StringVar(&c.clusterURL, "cluster_url", "http://localhost:8001/api/v1", "set the Kubernetes API URL")
 	flag.StringVar(&c.fitDoc, "fit", "/io/k8s/scheduler/fit", "set the path of the fit document")
 	flag.Parse()
 	return &c
 }
 
-func printVersion() {
-	fmt.Println(pkg.Version)
-}
-
-func runREPL(c *config) {
-
-	store := storage.New(storage.InMemoryConfig())
-	compiler := loadPolicy(c.policyFile)
-	storePolicy(store, compiler.Modules)
-
-	fit := []interface{}{}
-	for _, x := range strings.Split(c.fitDoc[1:], "/") {
-		fit = append(fit, x)
+func parsePath(p string) []interface{} {
+	if p[0] != '/' {
+		glog.Fatalf("Invalid path: %v", p)
 	}
-
-	scheduler := pkg.New(compiler, store, fit, c.clusterURL)
-	glog.Info("Starting scheduler...")
-	scheduler.Start()
-
-	defer glog.Flush()
-	go func() {
-		for _ = range time.Tick(1 * time.Second) {
-			glog.Flush()
-		}
-	}()
-
-	r := repl.New(store, "", os.Stdout, "json", "")
-	setPackage(r, c.fitDoc)
-	r.Loop()
+	parts := strings.Split(p[1:], "/")
+	r := make([]interface{}, len(parts))
+	for i := range parts {
+		r[i] = parts[i]
+	}
+	return r
 }
 
 func main() {
 	c := parseArgs()
 	if c.showVersion {
-		printVersion()
+		cmdPrintVersion()
 	} else {
-		runREPL(c)
+		cmdServer(c)
 	}
 }
