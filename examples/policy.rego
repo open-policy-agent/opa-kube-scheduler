@@ -11,7 +11,7 @@ import requested_pod as req
 # Fit rule for all pods. Implements same filtering and
 # prioritisation logic that is included by default in Kubernetes.
 fit[node_name] = weight :-
-    scheduler_name[my_scheduler_name],
+    scheduler_name_match,
     filter[node_id],
     prioritize[node_id] = weight,
     node_name = nodes[node_id].metadata.name
@@ -198,11 +198,9 @@ blacklisted[node_name] :-
     ],
     node_name = node_names[i]
 
-my_scheduler_name = "experimental"
-
-# This scheduler is responsible for pods annotated with the following scheduler names.
-scheduler_name[scheduler] :-
-    req.metadata.annotations[k8s_scheduler_annotations] = scheduler
+# This scheduler is responsible for pods annotated with the "experimental" name.
+scheduler_name_match :-
+    req.metadata.annotations[k8s_scheduler_annotation] = "experimental"
 
 # Scheduler annotation. This annotation indicates whether the scheduler is responsible
 # for this pod.
