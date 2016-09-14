@@ -1,0 +1,15 @@
+package: github.com/open-policy-agent/opa
+import:
+- package: github.com/PuerkitoBio/pigeon
+- package: golang.org/x/tools
+  subpackages:
+  - cmd/goimports
+- package: github.com/spf13/cobra
+- package: github.com/golang/lint
+- package: github.com/peterh/liner
+- package: github.com/pkg/errors
+- package: github.com/gorilla/mux
+- package: github.com/gorilla/context
+- package: github.com/golang/glog
+- package: github.com/olekukonko/tablewriter
+- package: github.com/dchest/siphash

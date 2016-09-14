@@ -1,0 +1,13 @@
+package: github.com/open-policy-agent/rego-scheduler
+import:
+- package: github.com/golang/glog
+- package: github.com/open-policy-agent/opa
+  subpackages:
+  - ast
+  - server
+  - storage
+  - topdown
+- package: github.com/pkg/errors
+- package: k8s.io/kubernetes
+  subpackages:
+  - pkg/api/resource

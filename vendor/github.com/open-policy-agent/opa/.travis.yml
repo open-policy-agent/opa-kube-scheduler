@@ -1,0 +1,8 @@
+language: go
+env:
+  - CROSSCOMPILE="linux/amd64 darwin/amd64"
+go:
+  - 1.6
+  - 1.7
+install: make deps
+after_success: make perf-regression

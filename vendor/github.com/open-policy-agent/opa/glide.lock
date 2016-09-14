@@ -1,0 +1,34 @@
+hash: f2674369ef7d03abb3c149bdc86507802e930f3448c72a2d7edf79b1feac7e0b
+updated: 2016-07-10T12:33:51.307369663-07:00
+imports:
+- name: github.com/dchest/siphash
+  version: 6d8617816bb5d8268011ffbfb8720f17ce9af63c
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+- name: github.com/golang/lint
+  version: c7bacac2b21ca01afa1dee0acf64df3ce047c28f
+- name: github.com/gorilla/context
+  version: aed02d124ae4a0e94fea4541c8effd05bf0c8296
+- name: github.com/gorilla/mux
+  version: 9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/mattn/go-runewidth
+  version: d6bea18f789704b5f83375793155289da36a3c7f
+- name: github.com/olekukonko/tablewriter
+  version: daf2955e742cf123959884fdff4685aa79b63135
+- name: github.com/peterh/liner
+  version: 8975875355a81d612fafb9f5a6037bdcc2d9b073
+- name: github.com/pkg/errors
+  version: a2d6902c6d2a2f194eb3fb474981ab7867c81505
+- name: github.com/PuerkitoBio/pigeon
+  version: f890dd2f774b324894bfd1dd61c2d227179bcc2d
+- name: github.com/spf13/cobra
+  version: a272c3cbd5ff80a5bf5c5603df50183f9f3f7324
+- name: github.com/spf13/pflag
+  version: 367864438f1b1a3c7db4da06a2f55b144e6784e0
+- name: golang.org/x/tools
+  version: 26c35b4dcf6dfcb924e26828ed9f4d028c5ce05a
+  subpackages:
+  - cmd/goimports
+testImports: []

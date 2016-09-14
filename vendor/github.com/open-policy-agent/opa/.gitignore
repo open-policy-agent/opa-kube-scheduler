@@ -1,0 +1,12 @@
+# development environment
+.DS_Store
+.vscode
+
+# build artifacts
+coverage
+opa
+opa_linux_amd64
+opa_darwin_amd64
+
+# runtime artifacts
+policies
