@@ -23,6 +23,11 @@ func cmdServer(c *config) {
 	}
 
 	store := storage.New(storage.InMemoryConfig().WithPolicyDir(c.policyDir))
+
+	if err := store.Open(); err != nil {
+		glog.Fatalf("Unable open storage: %v.", err)
+	}
+
 	server := server.New(store, c.listenAddr, true)
 	scheduler := pkg.New(server, store, parsePath(c.fitDoc), c.clusterURL)
 
