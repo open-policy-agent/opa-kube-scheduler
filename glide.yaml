@@ -11,3 +11,4 @@ import:
 - package: k8s.io/kubernetes
   subpackages:
   - pkg/api/resource
+  version: fa943089125df49667bb2c09b688ae6af5275686

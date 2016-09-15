@@ -1,5 +1,5 @@
-hash: 80df869635687c3d1c9f7a6ab4c4c50697c9e3770e037620692a31166a6ae71f
-updated: 2016-09-14T15:16:03.145415341-07:00
+hash: 2e9e37660706e25fef47221ece8ab1e6cc0274f90171df185f48f84e60ef3973
+updated: 2016-09-15T09:41:33.717708875-07:00
 imports:
 - name: github.com/dchest/siphash
   version: 4ebf1de738443ea7f45f02dc394c4df1942a126d
@@ -52,7 +52,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/open-policy-agent/opa
-  version: 5642c7fc572b97bf71b5f3d5fa6ad0b1fe5019eb
+  version: 89d94a4074a8f52df0344e9cf23c34bf61eb7d20
   subpackages:
   - ast
   - server

@@ -28,7 +28,11 @@ func cmdServer(c *config) {
 		glog.Fatalf("Unable open storage: %v.", err)
 	}
 
-	server := server.New(store, c.listenAddr, true)
+	server, err := server.New(store, c.listenAddr, true)
+	if err != nil {
+		glog.Fatalf("Unable to create server: %v.", err)
+	}
+
 	scheduler := pkg.New(server, store, parsePath(c.fitDoc), c.clusterURL)
 
 	if err := scheduler.Start(); err != nil {
