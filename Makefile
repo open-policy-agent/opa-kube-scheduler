@@ -1,6 +1,6 @@
 IMAGE 	:= openpolicyagent/rego-scheduler
 BINARY 	:= rego-scheduler
-VERSION := 0.1.0
+VERSION := 0.1.1
 
 all: build 
 	@echo $(TAG)

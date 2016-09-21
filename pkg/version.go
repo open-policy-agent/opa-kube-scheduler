@@ -6,5 +6,5 @@ package pkg
 
 // The version information that is displayed when the -version flag is given.
 const (
-	Version = "0.1.0"
+	Version = "0.1.1"
 )

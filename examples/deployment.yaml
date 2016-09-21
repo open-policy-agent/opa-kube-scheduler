@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: rego-scheduler
-          image: openpolicyagent/rego-scheduler:0.1.0
+          image: openpolicyagent/rego-scheduler:0.1.1
           env:
           - name: KUBERNETES_SERVICE_HOST
             value: kubernetes
