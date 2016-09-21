@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"time"
 
+	"k8s.io/kubernetes/pkg/client/restclient"
+
 	"github.com/golang/glog"
 )
 
@@ -35,12 +37,14 @@ const (
 )
 
 type reflector struct {
-	Rx  chan interface{}
-	URL *url.URL
+	Rx     chan interface{}
+	config *restclient.Config
+	URL    *url.URL
 }
 
-func newReflector(baseURL string, resourceType string, fieldSelector string) (*reflector, error) {
-	u, err := url.Parse(baseURL + "/" + resourceType)
+func newReflector(config *restclient.Config, resourceType string, fieldSelector string) (*reflector, error) {
+
+	u, err := url.Parse(baseURLFor(config) + "/" + resourceType)
 
 	if err != nil {
 		return nil, err
@@ -51,8 +55,9 @@ func newReflector(baseURL string, resourceType string, fieldSelector string) (*r
 	u.RawQuery = q.Encode()
 
 	r := &reflector{
-		Rx:  make(chan interface{}),
-		URL: u,
+		Rx:     make(chan interface{}),
+		URL:    u,
+		config: config,
 	}
 
 	return r, nil
@@ -85,7 +90,13 @@ func (r *reflector) list() ([]interface{}, string, error) {
 		return nil, "", err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client, err := clientFor(r.config)
+	if err != nil {
+		return nil, "", err
+	}
+
+	resp, err := client.Do(req)
+
 	if err != nil {
 		return nil, "", err
 	}
@@ -125,7 +136,12 @@ func (r *reflector) watch(version string) error {
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client, err := clientFor(r.config)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return err

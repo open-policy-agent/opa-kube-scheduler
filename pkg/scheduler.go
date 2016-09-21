@@ -12,6 +12,8 @@ import (
 	"sort"
 	"time"
 
+	"k8s.io/kubernetes/pkg/client/restclient"
+
 	"github.com/golang/glog"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -22,19 +24,19 @@ import (
 
 // Scheduler implements ...
 type Scheduler struct {
-	store      *storage.Storage
-	server     *server.Server
-	fit        []interface{}
-	clusterURL string
+	store  *storage.Storage
+	server *server.Server
+	fit    []interface{}
+	config *restclient.Config
 }
 
 // New returns a new Scheduler object.
-func New(server *server.Server, store *storage.Storage, fit []interface{}, clusterURL string) *Scheduler {
+func New(server *server.Server, store *storage.Storage, fit []interface{}, config *restclient.Config) *Scheduler {
 	return &Scheduler{
-		store:      store,
-		server:     server,
-		fit:        fit,
-		clusterURL: clusterURL,
+		store:  store,
+		server: server,
+		fit:    fit,
+		config: config,
 	}
 }
 
@@ -104,7 +106,7 @@ func (s *Scheduler) run() {
 
 	// Start the reflectors.
 	for _, sp := range spec {
-		r, err := newReflector(s.clusterURL, sp.resourceType, sp.fieldSelector)
+		r, err := newReflector(s.config, sp.resourceType, sp.fieldSelector)
 		if err != nil {
 			return
 		}
@@ -276,13 +278,19 @@ func (s *Scheduler) bindPod(pod map[string]interface{}) error {
 		return err
 	}
 
-	path := fmt.Sprintf("%v/namespaces/%v/bindings", s.clusterURL, namespace)
+	path := fmt.Sprintf("%v/namespaces/%v/bindings", baseURLFor(s.config), namespace)
+
 	req, err := http.NewRequest("POST", path, buf)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client, err := clientFor(s.config)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

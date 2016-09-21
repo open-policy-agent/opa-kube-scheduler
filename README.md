@@ -6,13 +6,13 @@ This project shows how OPA can policy-enable container scheduling in Kubernetes.
 
 To build the scheduler binary:
 
-```
+```bash
 make
 ```
 
 To build the Docker image:
 
-```
+```bash
 make image
 ```
 
@@ -22,7 +22,7 @@ Kubernetes allows users to run multiple independent schedulers in the cluster. O
 
 In rego-scheduler, the name of the scheduler is part of the scheduling policy. If annotation does not match the policy, rego-scheduler will ignore the pod:
 
-```
+```ruby
 package io.k8s.scheduler
 
 import requested_pod as req
@@ -83,16 +83,8 @@ The scheduler can be deployed on Kubernetes. For example, assuming you are using
 
 ### Development
 
-If you have built the scheduler, you can run it in the development as follows.
-
-1. Setup port forwarding so that the scheduler can communicate with Kubernetes:
+If you have built the scheduler, you can run it in the development with:
 
 	```bash
-	kubectl proxy
-	```
-
-1. Run the scheduler
-
-	```bash
-	./rego-scheduler --v 2 --logtostderr 1
+	./rego-scheduler -kubeconfig ~/.kube/config --v 2 --logtostderr 1
 	```

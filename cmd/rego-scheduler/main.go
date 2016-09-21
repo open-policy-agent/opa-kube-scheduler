@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/opa/server"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/rego-scheduler/pkg"
+	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 )
 
 func cmdServer(c *config) {
@@ -33,7 +34,13 @@ func cmdServer(c *config) {
 		glog.Fatalf("Unable to create server: %v.", err)
 	}
 
-	scheduler := pkg.New(server, store, parsePath(c.fitDoc), c.clusterURL)
+	config, err := clientcmd.BuildConfigFromFlags("", c.kubeconfigPath)
+
+	if err != nil {
+		glog.Fatalf("Unable to get REST client configuration: %v", err)
+	}
+
+	scheduler := pkg.New(server, store, parsePath(c.fitDoc), config)
 
 	if err := scheduler.Start(); err != nil {
 		glog.Fatalf("Unable to start scheduler: %v.", err)
@@ -49,11 +56,11 @@ func cmdPrintVersion() {
 }
 
 type config struct {
-	showVersion bool
-	listenAddr  string
-	policyDir   string
-	clusterURL  string
-	fitDoc      string
+	showVersion    bool
+	listenAddr     string
+	policyDir      string
+	kubeconfigPath string
+	fitDoc         string
 }
 
 func parseArgs() *config {
@@ -61,8 +68,8 @@ func parseArgs() *config {
 	flag.BoolVar(&c.showVersion, "version", false, "print the scheduler version and exit")
 	flag.StringVar(&c.listenAddr, "listen_addr", ":8181", "set the listening address of the server")
 	flag.StringVar(&c.policyDir, "policy_dir", "policies", "set the path of the directory to store policies")
-	flag.StringVar(&c.clusterURL, "cluster_url", "http://localhost:8001/api/v1", "set the Kubernetes API URL")
 	flag.StringVar(&c.fitDoc, "fit", "/io/k8s/scheduler/fit", "set the path of the fit document")
+	flag.StringVar(&c.kubeconfigPath, "kubeconfig", "", "set the path of the kubeconfig file")
 	flag.Parse()
 	return &c
 }
