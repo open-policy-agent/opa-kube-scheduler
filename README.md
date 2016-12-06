@@ -1,4 +1,4 @@
-# rego-scheduler
+# opa-kube-scheduler
 
 This project shows how OPA can policy-enable container scheduling in Kubernetes.
 
@@ -20,7 +20,7 @@ make image
 
 Kubernetes allows users to run multiple independent schedulers in the cluster. Once an additional scheduler is deployed, pod scheduling can be delegated to it by annotating the pods with the name of the scheduler.
 
-In rego-scheduler, the name of the scheduler is part of the scheduling policy. If annotation does not match the policy, rego-scheduler will ignore the pod:
+In opa-kube-scheduler, the name of the scheduler is part of the scheduling policy. If annotation does not match the policy, opa-kube-scheduler will ignore the pod:
 
 ```ruby
 package io.k8s.scheduler
@@ -50,19 +50,17 @@ The scheduler can be deployed on Kubernetes. For example, assuming you are using
 1. Expose the scheduler's server as as service:
 
 	```bash
-	kubectl expose deployment rego-scheduler \
-		--port 8181 --target 8181 --type NodePort
+	kubectl expose deployment opa-kube-scheduler \
+		--port 8181 --target-port 8181 --type NodePort
 	```
 
 1.  Obtain the scheduler's URL:
 
-
 	```bash
-	SCHEDULER_URL=$(minikube service rego-scheduler --url)
+	SCHEDULER_URL=$(minikube service opa-kube-scheduler --url)
 	```
 
 1. Push the scheduling policy to the scheduler:
-
 
 	```bash
 	curl -X PUT --data-binary \
@@ -78,13 +76,13 @@ The scheduler can be deployed on Kubernetes. For example, assuming you are using
 1. If you tail the scheduler's log, you will see that it has scheduled the nginx pods:
 
 	```bash
-	kubectl logs <POD-NAME> -c rego-scheduler
+	kubectl logs $(kubectl get pod | grep opa-kube-scheduler | cut -f 1 -d ' ')
 	```
 
 ### Development
 
 If you have built the scheduler, you can run it in the development with:
 
-	```bash
-	./rego-scheduler -kubeconfig ~/.kube/config --v 2 --logtostderr 1
-	```
+```bash
+./opa-kube-scheduler -kubeconfig ~/.kube/config --v 2 --logtostderr 1
+```

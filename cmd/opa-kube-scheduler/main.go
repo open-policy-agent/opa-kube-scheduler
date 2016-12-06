@@ -13,7 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/open-policy-agent/opa/server"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/rego-scheduler/pkg"
+	"github.com/open-policy-agent/opa-kube-scheduler/pkg"
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 )
 

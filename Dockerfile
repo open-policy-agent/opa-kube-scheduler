@@ -1,4 +1,4 @@
 FROM scratch
 MAINTAINER Torin Sandall <torinsandall@gmail.com>
-ADD rego-scheduler /rego-scheduler
-CMD ["/rego-scheduler", "--v=2", "--logtostderr=1"]
+ADD opa-kube-scheduler_linux_amd64 /opa-kube-scheduler
+CMD ["/opa-kube-scheduler", "--v=2", "--logtostderr=1"]

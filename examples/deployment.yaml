@@ -2,19 +2,19 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: rego-scheduler
-  name: rego-scheduler
+    app: opa-kube-scheduler
+  name: opa-kube-scheduler
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: rego-scheduler
-      name: rego-scheduler
+        app: opa-kube-scheduler
+      name: opa-kube-scheduler
     spec:
       containers:
-        - name: rego-scheduler
-          image: openpolicyagent/rego-scheduler:0.1.1
+        - name: opa-kube-scheduler
+          image: openpolicyagent/opa-kube-scheduler:0.1.2
           env:
           - name: KUBERNETES_SERVICE_HOST
             value: kubernetes
