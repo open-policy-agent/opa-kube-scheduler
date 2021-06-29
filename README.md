@@ -1,4 +1,6 @@
-# opa-kube-scheduler
+# **[ARCHIVED]** opa-kube-scheduler
+
+This project is no longer active and will be deleted in the future.
 
 This project shows how OPA can policy-enable container scheduling in Kubernetes.
 
